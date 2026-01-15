@@ -1,0 +1,55 @@
+
+{
+  "firestore": {
+    "rules": "
+      service cloud.firestore {
+        match /databases/{database}/documents {
+          // Helper: Is HOD
+          function isHOD() {
+            return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'HOD';
+          }
+
+          // Tasks Collection
+          match /tasks/{taskId} {
+            allow read: if isHOD() || resource.data.assignedTo == request.auth.uid;
+            allow create: if isHOD();
+            allow update: if isHOD() || (resource.data.assignedTo == request.auth.uid && request.resource.data.status == 'COMPLETED');
+          }
+
+          // Reports Collection (Privacy Logic)
+          match /reports/{reportId} {
+            allow create: if request.auth.uid != null;
+            allow read: if isHOD() 
+                        || resource.data.submittedBy == request.auth.uid 
+                        || resource.data.visibility == 'PUBLIC';
+          }
+        }
+      }
+    ",
+    "storage": "
+      service firebase.storage {
+        match /b/{bucket}/o {
+          match /users/{userId}/{allPaths=**} {
+            // Users can upload to their own folder
+            allow write: if request.auth.uid == userId;
+            // HOD can read everything, users read their own
+            allow read: if request.auth.uid == userId 
+                        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'HOD';
+          }
+        }
+      }
+    "
+  },
+  "data_models": {
+    "reports": {
+      "id": "string",
+      "taskId": "string",
+      "submittedBy": "string (uid)",
+      "description": "text",
+      "shared_folder_link": "url (string)",
+      "file_urls": "array of strings",
+      "visibility": "string ('HOD_ONLY' | 'PUBLIC')",
+      "timestamp": "serverTimestamp"
+    }
+  }
+}

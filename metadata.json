@@ -1,0 +1,7 @@
+{
+  "name": "DeptFlow",
+  "description": "A high-performance department workflow and reporting application designed for seamless task management, status tracking, and rich reporting for staff and HODs.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
